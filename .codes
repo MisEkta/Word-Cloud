@@ -1,0 +1,83 @@
+!pip install wordcloud
+
+#importing libraries
+from os import path
+from PIL import Image
+import numpy as np
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud, STOPWORDS
+  
+ def google_authenticate():
+  # Authenticate first so the Google Drive library can detect your credentials.
+  from google.colab import auth
+  auth.authenticate_user()
+
+  from googleapiclient.discovery import build
+  drive_service = build('drive', 'v3')
+  return drive_service
+
+drive_service = google_authenticate()
+
+# mounting the drive
+from google.colab import drive
+drive.mount('/content/drive')
+
+def read_file(file_id):
+  """
+  Download file from Google Drive
+  Argument: file_id
+  Returns: downloaded file
+  """
+  file_id = file_id
+
+  import io
+  from googleapiclient.http import MediaIoBaseDownload
+
+  request = drive_service.files().get_media(fileId=file_id)
+  downloaded = io.BytesIO()
+  downloader = MediaIoBaseDownload(downloaded, request)
+  done = False
+  while done is False:
+    # _ is a placeholder for a progress object that we ignore.
+    # (Our file is small, so we skip reporting progress.)
+    _, done = downloader.next_chunk()
+
+  downloaded.seek(0)
+  return downloaded
+  #print 'Downloaded file contents are:', downloaded.read()
+
+text_file = read_file('11TiZDhMpDhXAE985kGwVmL_lQoT15pLp') # file url
+
+document = text_file.read()
+print(len(document))
+print(document[0:100])
+
+import re
+
+document = document.decode('utf-8')
+
+# word cloud without a specific image.
+wordcloud = WordCloud().generate(document)
+plt.imshow(wordcloud, interpolation='bilinear')
+plt.axis("off")
+
+# word cloud with image.
+image_file = read_file("1w_InaQidAm5BvLoXkBuF-upxgDjpNek4") # image url
+
+# create mask
+alice_mask = np.array(Image.open(image_file))
+
+# remove stopwords
+stopwords = set(STOPWORDS)
+stopwords.add("said")
+
+# generate word cloud
+wc = WordCloud(background_color="pink", max_words=5000, mask=alice_mask,
+               stopwords=stopwords)
+wc.generate(document)
+
+# plot the word cloud
+plt.figure(figsize=(10,8), dpi=250)
+plt.imshow(wc, interpolation='bilinear')
+plt.axis("on")
+plt.show()
